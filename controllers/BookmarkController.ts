@@ -20,6 +20,8 @@ import TuitDao from "../daos/TuitDao";
  *     no londer bookmarks a tuit</li>
  *    <li>DELETE /api/users/:uid/bookmarks to record that a user
  *     no londer bookmark any tuit</li>
+ *     <li>PUT /api/users/:uid/bookmarks/:tid to toggle that a user bookmarks a tuit
+ *     </li>
  * </ul>
  * @property {BookmarkDao} BookmarkDao Singleton DAO implementing bookmarks CRUD operations
  * @property {BookmarkController} BookmarkController Singleton controller implementing
@@ -74,12 +76,20 @@ export default class BookmarkController implements BookmarkControllerI {
         const profile = req.session['profile'];
         const userId = uid === 'me' && profile ?
             profile._id : uid;
-        BookmarkController.bookmarkDao.findAllTuitsBookmarkedByUser(userId)
-            .then(bookmarks => {
-                const bookmarksNonNullTuits = bookmarks.filter(bookmark => bookmark.bookmarkedTuit)
-                const tuitsFromBookmarks = bookmarksNonNullTuits.map(bookmark => bookmark.bookmarkedTuit);
-                res.json(tuitsFromBookmarks)
-            })
+        if (userId === "me") {
+            res.sendStatus(503);
+            return;
+        }
+        try {
+            BookmarkController.bookmarkDao.findAllTuitsBookmarkedByUser(userId)
+                .then(bookmarks => {
+                    const bookmarksNonNullTuits = bookmarks.filter(bookmark => bookmark.bookmarkedTuit)
+                    const tuitsFromBookmarks = bookmarksNonNullTuits.map(bookmark => bookmark.bookmarkedTuit);
+                    res.json(tuitsFromBookmarks)
+                })
+        } catch (e) {
+            res.sendStatus(404);
+        }
     }
 
     /**
@@ -116,7 +126,14 @@ export default class BookmarkController implements BookmarkControllerI {
         BookmarkController.bookmarkDao.userUnbookmarksAllTuit(req.params.uid)
             .then(status => res.send(status));
 
-
+    /**
+     * @param {Request} req Represents request from client, including the
+     * path parameters uid and tid representing the user that is bookmarking the tuit
+     * and the tuit being bookmarked
+     * @param {Response} res Represents response to client, including the
+     * body formatted as JSON containing the new bookmarks that was inserted in the
+     * database
+     */
     userTogglesTuitBookmarks = async (req: Request, res: Response) => {
         const bookmarkDao = BookmarkController.bookmarkDao;
         const tuitDao = BookmarkController.tuitDao;
@@ -126,6 +143,10 @@ export default class BookmarkController implements BookmarkControllerI {
         const profile = req.session['profile'];
         const userId = uid === 'me' && profile ?
             profile._id : uid;
+        if (userId === "me") {
+            res.sendStatus(503);
+            return;
+        }
         try {
             const userAlreadyBookmarkedTuit = await bookmarkDao.findUserBookmarksTuit(userId, tid);
             const howManyBookmarkedTuit = await bookmarkDao.countHowManyBookmarkedTuit(tid);
@@ -136,7 +157,7 @@ export default class BookmarkController implements BookmarkControllerI {
             } else {
                 await BookmarkController.bookmarkDao.userBookmarksTuit(userId, tid);
                 tuit.stats.bookmarks = howManyBookmarkedTuit + 1;
-            };
+            }
             await tuitDao.updateBookmarks(tid, tuit.stats);
             res.sendStatus(200);
         } catch (e) {
