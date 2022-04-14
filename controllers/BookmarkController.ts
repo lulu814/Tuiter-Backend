@@ -4,7 +4,6 @@
 import {Express, Request, Response} from "express";
 import BookmarkDao from "../daos/BookmarkDao";
 import BookmarkControllerI from "../interfaces/BookmarkControllerI";
-import TuitDao from "../daos/TuitDao";
 
 /**
  * @class BookmarkController Implements RESTful Web service API for bookmarks resource.
@@ -27,7 +26,6 @@ import TuitDao from "../daos/TuitDao";
  */
 export default class BookmarkController implements BookmarkControllerI {
     private static bookmarkDao: BookmarkDao = BookmarkDao.getInstance();
-    private static tuitDao: TuitDao = TuitDao.getInstance();
     private static bookmarkController: BookmarkController | null = null;
     /**
      * Creates singleton controller instance
@@ -43,7 +41,6 @@ export default class BookmarkController implements BookmarkControllerI {
             app.post("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.userBookmarksTuit);
             app.delete("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.userUnbookmarksTuit);
             app.delete("/api/users/:uid/bookmarks", BookmarkController.bookmarkController.userUnbookmarksAllTuit);
-            app.put("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.userTogglesTuitBookmarks);
         }
         return BookmarkController.bookmarkController;
     }
@@ -68,19 +65,9 @@ export default class BookmarkController implements BookmarkControllerI {
      * @param {Response} res Represents response to client, including the
      * body formatted as JSON arrays containing the tuit objects that were bookmarked
      */
-    findAllTuitsBookmarkedByUser = (req: Request, res: Response) => {
-        const uid = req.params.uid
-        // @ts-ignore
-        const profile = req.session['profile'];
-        const userId = uid === 'me' && profile ?
-            profile._id : uid;
-        BookmarkController.bookmarkDao.findAllTuitsBookmarkedByUser(userId)
-            .then(bookmarks => {
-                const bookmarksNonNullTuits = bookmarks.filter(bookmark => bookmark.bookmarkedTuit)
-                const tuitsFromBookmarks = bookmarksNonNullTuits.map(bookmark => bookmark.bookmarkedTuit);
-                res.json(tuitsFromBookmarks)
-            })
-    }
+    findAllTuitsBookmarkedByUser = (req: Request, res: Response) =>
+        BookmarkController.bookmarkDao.findAllTuitsBookmarkedByUser(req.params.uid)
+            .then(tuits => res.json(tuits));
 
     /**
      * @param {Request} req Represents request from client, including the
@@ -115,33 +102,4 @@ export default class BookmarkController implements BookmarkControllerI {
     userUnbookmarksAllTuit = (req: Request, res: Response) =>
         BookmarkController.bookmarkDao.userUnbookmarksAllTuit(req.params.uid)
             .then(status => res.send(status));
-
-
-    userTogglesTuitBookmarks = async (req: Request, res: Response) => {
-        const bookmarkDao = BookmarkController.bookmarkDao;
-        const tuitDao = BookmarkController.tuitDao;
-        const uid = req.params.uid;
-        const tid = req.params.tid;
-        // @ts-ignore
-        const profile = req.session['profile'];
-        const userId = uid === 'me' && profile ?
-            profile._id : uid;
-        try {
-            const userAlreadyBookmarkedTuit = await bookmarkDao.findUserBookmarksTuit(userId, tid);
-            const howManyBookmarkedTuit = await bookmarkDao.countHowManyBookmarkedTuit(tid);
-            let tuit = await tuitDao.findTuitById(tid);
-            if (userAlreadyBookmarkedTuit) {
-                await bookmarkDao.userUnbookmarksTuit(userId, tid);
-                tuit.stats.bookmarks = howManyBookmarkedTuit - 1;
-            } else {
-                await BookmarkController.bookmarkDao.userBookmarksTuit(userId, tid);
-                tuit.stats.bookmarks = howManyBookmarkedTuit + 1;
-            };
-            await tuitDao.updateBookmarks(tid, tuit.stats);
-            res.sendStatus(200);
-        } catch (e) {
-        res.sendStatus(400);
-        }
-    }
-    };
-
+};
