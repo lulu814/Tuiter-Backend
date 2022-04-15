@@ -52,7 +52,7 @@ mongoose.connect(connectionString);
 // mongoose.connect('mongodb://localhost:27017/tuit-db');
 
 let sess = {
-    secret: process.env.EXPRESS_SESSION_SECRET,
+    secret: '123',//process.env.EXPRESS_SESSION_SECRET
     saveUninitialized: true,
     resave: true,
     cookie: {
