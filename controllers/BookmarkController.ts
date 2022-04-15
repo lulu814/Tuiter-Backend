@@ -22,6 +22,8 @@ import TuitDao from "../daos/TuitDao";
  *     no londer bookmark any tuit</li>
  *     <li>PUT /api/users/:uid/bookmarks/:tid to toggle that a user bookmarks a tuit
  *     </li>
+ *     <li>GET /api/users/:uid/bookmarks/:tid to retrieve that a user bookmarked a tuit
+ *     </li>
  * </ul>
  * @property {BookmarkDao} BookmarkDao Singleton DAO implementing bookmarks CRUD operations
  * @property {BookmarkController} BookmarkController Singleton controller implementing
@@ -46,6 +48,7 @@ export default class BookmarkController implements BookmarkControllerI {
             app.delete("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.userUnbookmarksTuit);
             app.delete("/api/users/:uid/bookmarks", BookmarkController.bookmarkController.userUnbookmarksAllTuit);
             app.put("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.userTogglesTuitBookmarks);
+            app.get("/api/users/:uid/bookmarks/:tid", BookmarkController.bookmarkController.findUserBookmarkedTuit);
         }
         return BookmarkController.bookmarkController;
     }
@@ -164,5 +167,26 @@ export default class BookmarkController implements BookmarkControllerI {
         res.sendStatus(400);
         }
     }
-    };
 
+    /**
+     * Check if the user has already bookmarked the tuit
+     * @param {Request} req Represents request from client, including the path
+     * parameter uid representing the user, and the tid representing the tuit
+     * @param {Response} res Represents response to client, including the
+     * body formatted as JSON object containing the bookmark objects or null
+     */
+    findUserBookmarkedTuit = async (req: Request, res: Response) => {
+        const uid = req.params.uid;
+        const tid = req.params.tid;
+        // @ts-ignore
+        const profile = req.session['profile'];
+        const userId = uid === 'me' && profile ?
+            profile._id : uid;
+        if (userId === "me") {
+            res.sendStatus(503);
+            return;
+        }
+        BookmarkController.bookmarkDao.findUserBookmarksTuit(userId, tid)
+            .then(bookmark => res.json(bookmark));
+        }
+};
