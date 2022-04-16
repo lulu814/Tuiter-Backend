@@ -6,6 +6,18 @@ import Tuit from "../models/tuits/Tuit";
 import TuitDao from "../daos/TuitDao";
 import TuitControllerI from "../interfaces/TuitControllerI";
 
+import multer from "multer";
+import streamifier from "streamifier";
+import {v2 as cloudinary, UploadApiResponse } from "cloudinary";
+
+const upload = multer();
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 /**
  * @class TuitController Implements RESTful Web service API for tuits resource.
  * Defines the following HTTP endpoints:
@@ -46,6 +58,8 @@ export default class TuitController implements TuitControllerI {
             app.post("/api/users/:uid/tuits", TuitController.tuitController.createTuitByUser);
             app.put("/api/tuits/:tid", TuitController.tuitController.updateTuit);
             app.delete("/api/tuits/:tid", TuitController.tuitController.deleteTuit);
+
+            app.post("/api/tuits/image/upload", upload.array('images', 4), TuitController.tuitController.imageUpload);
         }
         return TuitController.tuitController;
     }
@@ -141,4 +155,35 @@ export default class TuitController implements TuitControllerI {
     updateTuit = (req: Request, res: Response) =>
         TuitController.tuitDao.updateTuit(req.params.tid, req.body)
             .then((status) => res.send(status));
+
+    imageUpload = (req: Request, res: Response) => {
+        // @ts-ignore
+        const fileArray: Array = req.files
+        if (fileArray) {
+            // @ts-ignore
+            Promise.all(fileArray.map((file: Object) => this.imageUploadStream(file.buffer)))
+                .then(status => {
+                    res.send(status);
+                })
+        }
+    }
+
+    imageUploadStream = (buf: Buffer):Promise<UploadApiResponse> => {
+        return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'upload',
+                    upload_preset: 'ml_default',
+                },
+                (err, result) => {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        reject(err);
+                    }
+                }
+            );
+            streamifier.createReadStream(buf).pipe(uploadStream)
+        })
+    }
 }
