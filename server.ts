@@ -44,8 +44,7 @@ const DB_PASSWORD = process.env.DB_PASSWORD;
 const HOST = "cluster0.zrfyc.mongodb.net";
 const DB_NAME = "myFirstDatabase";
 const DB_QUERY = "retryWrites=true&w=majority";
-const connectionString = '`${PROTOCOL}://${DB_USERNAME}:${DB_PASSWORD}@${HOST}/${DB_NAME}?${DB_QUERY}`;'
-// const connectionString = `${process.env.MONGODB}`
+const connectionString = `${PROTOCOL}://${DB_USERNAME}:${DB_PASSWORD}@${HOST}/${DB_NAME}?${DB_QUERY}`;
 // connect to the database
 mongoose.connect(connectionString);
 
