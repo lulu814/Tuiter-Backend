@@ -14,7 +14,7 @@
  * service
  */
 require('dotenv').config({
-    path:"./.env"
+    path: "./.env"
 });
 import express from 'express';
 import mongoose from 'mongoose';
