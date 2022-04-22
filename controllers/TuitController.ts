@@ -156,6 +156,12 @@ export default class TuitController implements TuitControllerI {
         TuitController.tuitDao.updateTuit(req.params.tid, req.body)
             .then((status) => res.send(status));
 
+    /**
+     * @param {Request} req Represents request from client, including the path url of an image in
+     * tuit object for new tuit insert the image into database
+     * @param {Request} res Represents request to client, including the path url of an image in
+     * tuit object for new tuit insert the image into database
+     */
     imageUpload = (req: Request, res: Response) => {
         // @ts-ignore
         const fileArray: Array = req.files
@@ -168,6 +174,9 @@ export default class TuitController implements TuitControllerI {
         }
     }
 
+    /**
+     * @param {Buffer} buf A buffer using firebase upload-stream to insert image into database
+     */
     imageUploadStream = (buf: Buffer):Promise<UploadApiResponse> => {
         return new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
